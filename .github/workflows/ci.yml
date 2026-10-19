@@ -1,0 +1,82 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Python 语法
+        run: python -m compileall -q scripts dashboard
+
+      - name: PowerShell 语法
+        shell: pwsh
+        run: |
+          $bad = 0
+          Get-ChildItem scripts -Filter *.ps1 | ForEach-Object {
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$null, [ref]$errors) | Out-Null
+            if ($errors.Count -gt 0) {
+              Write-Host "::error file=$($_.Name)::$($errors[0].Message)"
+              $bad++
+            }
+          }
+          if ($bad -gt 0) { exit 1 }
+          Write-Host "PowerShell 语法检查通过"
+
+      - name: 密钥扫描
+        run: |
+          set -e
+          # 真实密钥特征：sk- 开头的长串、私钥块；示例占位符（sk-your-key）不算
+          if grep -rInE "(^|[^A-Za-z0-9])sk-[A-Za-z0-9]{20,}|BEGIN (RSA|OPENSSH|EC) PRIVATE KEY" \
+             --exclude-dir=.git --exclude-dir=node_modules . ; then
+            echo "::error::发现疑似密钥，请移除"
+            exit 1
+          fi
+          echo "未发现疑似密钥"
+
+      - name: 敏感文件未被跟踪
+        run: |
+          set -e
+          if git ls-files | grep -E "(^|/)(\.env(\.local)?|\.deepseek-key|\.selfdesk-autologin\.json|.*\.jar)$"; then
+            echo "::error::敏感文件或产物被提交"
+            exit 1
+          fi
+          echo "工作区干净"
+
+      - name: README 图片引用存在
+        run: |
+          python - <<'PY'
+          import pathlib, re, sys
+          root = pathlib.Path(".")
+          text = (root / "README.md").read_text(encoding="utf-8")
+          refs = re.findall(r"!\[[^\]]*\]\(([^)]+)\)", text)
+          missing = [
+              p for p in refs
+              if not p.startswith(("http://", "https://")) and not (root / p).exists()
+          ]
+          if missing:
+              print("缺少图片:", missing)
+              sys.exit(1)
+          print(f"README 图片检查通过（{len(refs)} 个引用）")
+          PY
+
+      - name: compose 配置可解析
+        run: |
+          python -m pip install --quiet pyyaml
+          python - <<'PY'
+          import yaml
+          data = yaml.safe_load(open("compose.yaml", encoding="utf-8"))
+          assert "services" in data and "elasticsearch" in data["services"]
+          print("compose.yaml 解析通过")
+          PY

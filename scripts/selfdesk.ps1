@@ -36,6 +36,20 @@ $dashDir      = Join-Path $root 'dashboard'
 $dashPidFile  = Join-Path $runtime 'dashboard.pid'
 $ProgressPreference = 'SilentlyContinue'
 
+# 读取 .env.local（存在时），不覆盖已设置的环境变量
+$envFile = Join-Path $root '.env.local'
+if (Test-Path -LiteralPath $envFile) {
+    Get-Content -LiteralPath $envFile | ForEach-Object {
+        if ($_ -match '^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$') {
+            $k = $Matches[1]
+            $v = $Matches[2].Trim().Trim('"').Trim("'")
+            if ($v -and -not [Environment]::GetEnvironmentVariable($k, 'Process')) {
+                [Environment]::SetEnvironmentVariable($k, $v, 'Process')
+            }
+        }
+    }
+}
+
 $redisPort    = 16379
 $esPort       = 19200
 $embedPort    = 8000
@@ -126,14 +140,21 @@ function Wait-ES {
 
 function Start-Embedding {
     if (Test-Http "http://127.0.0.1:$embedPort/health") { Write-Host "  = Embedding 已在运行" ; return }
-    $launcher = Join-Path $root 'embedding_launcher.py'
-    if (-not (Test-Path -LiteralPath $launcher)) { throw ("缺少启动器: " + $launcher) }
-    # 日志由 launcher 自己写，这里不用 -Redirect*（PS 5.1 在 Path/PATH 并存时会崩）
-    $p = Start-Process -FilePath $embedPy -ArgumentList ('"' + $launcher + '"') `
-        -WorkingDirectory $root -WindowStyle Hidden -PassThru
+    $server = Join-Path $root 'scripts\embedding_server.py'
+    if (-not (Test-Path -LiteralPath $server)) { throw ('缺少向量服务: ' + $server) }
+    $py = $null
+    if (Test-Path -LiteralPath $embedPy) { $py = $embedPy }
+    else {
+        $cmd = Get-Command python -ErrorAction SilentlyContinue
+        if ($cmd) { $py = $cmd.Source }
+    }
+    if (-not $py) { throw '未找到 Python：请安装 Python 3.10+，或把虚拟环境放到 embedding-venv\Scripts\python.exe' }
+    $p = Start-Process -FilePath $py `
+        -ArgumentList @('-m','uvicorn','embedding_server:app','--host','127.0.0.1','--port',"$embedPort") `
+        -WorkingDirectory (Join-Path $root 'scripts') -WindowStyle Hidden -PassThru
     Set-Content -LiteralPath $embedPidFile -Value $p.Id -Encoding ASCII
     if (Wait-Http "http://127.0.0.1:$embedPort/health" 120 'Embedding') { Write-Host "  + Embedding 就绪 (:$embedPort)" }
-    else { throw "Embedding 启动失败，见 runtime\logs\embedding.log" }
+    else { throw "Embedding 启动失败：先执行 pip install fastembed，再看 scripts 目录下的 uvicorn 输出" }
 }
 
 function Start-App {
@@ -142,9 +163,12 @@ function Start-App {
     if (-not (Test-Path -LiteralPath $jar)) { throw ("找不到 jar: " + $jar) }
     if (-not (Test-Path -LiteralPath $java)) { throw ("找不到 java: " + $java) }
 
-    $keyFile = Join-Path $root '.deepseek-key'
-    if (-not (Test-Path -LiteralPath $keyFile)) { throw '缺少 .deepseek-key（DeepSeek API Key）' }
-    $key = (Get-Content -LiteralPath $keyFile -Raw).Trim()
+    $key = $env:DEEPSEEK_API_KEY
+    if (-not $key) {
+        $keyFile = Join-Path $root '.deepseek-key'
+        if (Test-Path -LiteralPath $keyFile) { $key = (Get-Content -LiteralPath $keyFile -Raw).Trim() }
+    }
+    if (-not $key) { throw '缺少 DeepSeek API Key：设置环境变量 DEEPSEEK_API_KEY，或在仓库根放 .deepseek-key' }
     if (-not $key) { throw '.deepseek-key 为空' }
 
     $wslIp = (wsl.exe -d Ubuntu -u root -- hostname -I).Trim().Split()[0]
