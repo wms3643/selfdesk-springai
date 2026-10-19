@@ -139,6 +139,22 @@ python scripts\patch_jar.py    # 重新打包，凭据只进 jar，不进仓库
 后台是编译好的 AntD，无法改主题变量，`selfdesk-brand.js` 用同一套 token 做 CSS 覆盖；
 自写页面（console / dashboard）直接使用同名变量，两边口径一致。
 
+## 能跑到什么程度
+
+**先说明：这个仓库不是 clone 就能运行的完整应用。** 它是跑在上游 bytedesk 之上的定制/部署层，
+需要一个已经构建好的上游 jar 和它依赖的 ES / Redis / PostgreSQL。诚实的验证范围：
+
+| 验证项 | 状态 |
+|---|---|
+| `patch_jar.py` 覆盖 console、写入两个脚本、注入 `<script>`、改 theme-color | 已用合成 jar 实测通过 |
+| 重复执行不重复注入（幂等） | 已验证，`selfdesk-brand.js` 只出现 1 次 |
+| 未提供 `.selfdesk-autologin.json` 时不注入任何凭据 | 已验证，jar 内搜不到账号密码 |
+| 备份原 jar（`.jar.bak-selfdesk`） | 已验证 |
+| 四个 PowerShell 脚本语法 | 解析 0 错误 |
+| 完整启动（ES/Redis/PG + 应用 + 仪表盘） | 依赖你的上游部署，本仓库未做自动化 |
+
+前端三个页面（客服台、仪表盘、后台主题）的截图都来自本地真实运行，不是设计稿。
+
 ## 已知限制
 
 - **不含上游源码**：需要自行获取 bytedesk 并构建 jar。
