@@ -1,0 +1,27 @@
+# 依赖与产物
+*.jar
+*.jar.bak*
+*.log
+logs/
+runtime/
+h2db/
+data/
+tmp/
+
+# 本地配置与密钥（绝不提交）
+.env
+.env.local
+.selfdesk-autologin.json
+.deepseek-key
+
+# 构建
+target/
+node_modules/
+.venv/
+embedding-venv/
+
+# 系统
+.DS_Store
+Thumbs.db
+__pycache__/
+*.py[cod]
