@@ -13,6 +13,26 @@ AI 侧用 **Spring AI**，模型可配多厂商，也能一键切到本地 Pytho
 
 ---
 
+## 两个版本
+
+同一套客服产品，两种 AI 实现。**入口、页面、业务逻辑都一样，换的是 AI 引擎。**
+
+| | 版本 A · 全 Java | 版本 B · 双语言 |
+|---|---|---|
+| 业务系统 | bytedesk（Java / Spring Boot） | 同一套，不改 |
+| AI 实现 | Spring AI + DeepSeek | Python + LangGraph 编排 |
+| 进程数 | 1 个（:9003） | 2 个（:9003 业务 + :8003 AI） |
+| 会话与状态 | 全在 H2 | 业务在 H2，AI 状态在 PostgreSQL |
+| 访客入口 | `:9003/chat/` | **同一个** `:9003/chat/`，AI 请求转给 8003 |
+| 代码仓库 | 本仓库 | 本仓库 + [selfdesk-langgraph](https://github.com/wms3643/selfdesk-langgraph) |
+
+版本之间切换只改一个环境变量（`SPRING_AI_DEEPSEEK_BASE_URL`），业务代码零改动：
+
+```
+.\scripts\ai-gateway.ps1 on -Restart     # A → B
+.\scripts\ai-gateway.ps1 off -Restart    # B → A
+```
+
 ## 它解决什么
 
 上游提供完整的客服业务，但有三件事不覆盖，这一层就是补它们：
