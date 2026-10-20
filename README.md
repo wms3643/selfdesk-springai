@@ -1,18 +1,17 @@
-# SelfDesk · Spring AI 客服系统定制层
+# SelfDesk · 客服系统界面与部署层
 
 ![ci](https://github.com/wms3643/selfdesk-springai/actions/workflows/ci.yml/badge.svg)
 
 > **完整源码在 [bytedesk-selfdesk](https://github.com/wms3643/bytedesk-selfdesk)**：24 个模块、239 个控制器的整套系统。
-> 本仓库只保留界面定制层与部署脚本，适合单独看改动。
+> 本仓库只保留界面与部署脚本，适合单独看这部分实现。
 
-在开源客服系统 [bytedesk](https://github.com/Bytedesk/bytedesk) 之上做的一层**可部署的定制**：
-自写客服工作台、运营仪表盘、统一视觉层，配一套能重复执行的打包与启停脚本。
+SelfDesk 客服系统的**界面与部署层**：自写客服工作台、运营仪表盘、统一视觉层，配一套能重复执行的打包与启停脚本。
 
 AI 侧用 **Spring AI**，模型可配多厂商，也能一键切到本地 Python 编排层（见 [docs/SPRING-AI.md](docs/SPRING-AI.md)）。
 
 ![客服工作台](docs/screenshots/agent-console.png)
 
-> 这是**部署层，不是 fork**：不含上游源码与 jar，需要上游代码构建。上游许可见 [NOTICE.md](NOTICE.md)（AGPL-3.0）。
+> 本仓库不含业务工程源码与构建产物（jar）；需配合完整源码工程构建。许可见 [LICENSE](LICENSE) 与 [NOTICE.md](NOTICE.md)（AGPL-3.0）。
 
 ---
 
@@ -22,7 +21,7 @@ AI 侧用 **Spring AI**，模型可配多厂商，也能一键切到本地 Pytho
 
 | | 版本 A · 全 Java | 版本 B · 双语言 |
 |---|---|---|
-| 业务系统 | bytedesk（Java / Spring Boot） | 同一套，不改 |
+| 业务系统 | Java / Spring Boot | 同一套，不改 |
 | AI 实现 | Spring AI + DeepSeek | Python + LangGraph 编排 |
 | 进程数 | 1 个（:9003） | 2 个（:9003 业务 + :8003 AI） |
 | 会话与状态 | 全在 H2 | 业务在 H2，AI 状态在 PostgreSQL |
@@ -38,23 +37,23 @@ AI 侧用 **Spring AI**，模型可配多厂商，也能一键切到本地 Pytho
 
 ## 它解决什么
 
-上游提供完整的客服业务，但有三件事不覆盖，这一层就是补它们：
+系统自带完整的客服业务，但有三件事不覆盖，这一层就是补它们：
 
 | 缺口 | 这一层的做法 |
 |---|---|
 | 坐席工作台只有默认界面 | 用原生 HTML/CSS/JS 重写一版，信息密度更高、交互更直接 |
 | 运营数据分散在多个接口，看不到 AI 成本 | 独立仪表盘聚合会话、状态、token 与费用 |
-| 后台是 AntD 默认蓝，和项目其他前端不统一 | 运行时注入一套设计 token，不改上游代码 |
+| 后台是 AntD 默认蓝，和项目其他前端不统一 | 运行时注入一套设计 token，不改业务代码 |
 
 ## 界面
 
 | 页面 | 地址 | 来源 |
 |---|---|---|
-| 访客端 | `http://127.0.0.1:9003/chat/` | 上游，套统一主题 |
+| 访客端 | `http://127.0.0.1:9003/chat/` | 系统自带，套统一主题 |
 | 客服工作台 | `http://127.0.0.1:9003/console/` | **本仓库** |
 | 运营仪表盘 | `http://127.0.0.1:8002/` | **本仓库** |
-| 管理后台 | `http://127.0.0.1:9003/admin` | 上游 + 主题层 |
-| 坐席移动端 | `http://127.0.0.1:9003/agent/` | 上游 |
+| 管理后台 | `http://127.0.0.1:9003/admin` | 系统 + 主题层 |
+| 坐席移动端 | `http://127.0.0.1:9003/agent/` | 系统自带 |
 
 ![运营仪表盘](docs/screenshots/ops-dashboard.png)
 
@@ -66,8 +65,8 @@ AI 侧用 **Spring AI**，模型可配多厂商，也能一键切到本地 Pytho
 
 | 依赖 | 版本 | 用途 |
 |---|---|---|
-| JDK | 21 | 运行上游 |
-| Maven | 3.9+ | 构建上游 |
+| JDK | 21 | 运行系统 |
+| Maven | 3.9+ | 构建系统 |
 | Docker | 任意近期版本 | 跑 Elasticsearch（必需） |
 | Python | 3.10+ | 打包脚本、仪表盘、向量服务 |
 | DeepSeek Key | — | Spring AI 调用模型 |
@@ -81,7 +80,7 @@ cd selfdesk-springai
 copy .env.example .env.local
 #   填 DEEPSEEK_API_KEY、BYTEDESK_ADMIN_PASSWORD
 
-# 3. 构建上游 + 打补丁（首次约 5~15 分钟；没有源码会浅克隆）
+# 3. 构建系统 + 打补丁（首次约 5~15 分钟）
 .\scripts\bootstrap.ps1
 
 # 4. 起 Elasticsearch
@@ -115,8 +114,8 @@ dashboard/          运营仪表盘（Python 标准库，无第三方依赖）
 admin-patch/        注入后台的主题脚本与首页替换脚本
 scripts/
 ├─ selfdesk.ps1     一键启停（ES / Redis / Embedding / App / Dashboard）
-├─ bootstrap.ps1    构建上游 → 打补丁 → 给出下一步
-├─ patch_jar.py     把定制层写进 fat jar（幂等）
+├─ bootstrap.ps1    构建系统 → 打补丁 → 给出下一步
+├─ patch_jar.py     把界面层写进 fat jar（幂等）
 ├─ ai-gateway.ps1   Spring AI 在「直连模型」与「本地编排层」之间切换
 └─ embedding_server.py  本地向量服务（fastembed）
 docs/               架构、打包机制、排障、Spring AI 对接
@@ -134,7 +133,7 @@ compose.yaml        Elasticsearch（+ 可选 Redis）
 
 ```bash
 pip install -r requirements-dev.txt
-pytest        # 3 个用例，秒级完成，不需要上游 jar
+pytest        # 3 个用例，秒级完成，不需要业务 jar
 ```
 
 | 用例 | 验证什么 |
@@ -147,7 +146,7 @@ CI 里还会跑：脚本语法、密钥扫描、敏感文件、README 图片引�
 
 ## 能跑到什么程度
 
-**这不是 clone 就能直接运行的完整应用**，需要上游 jar 与 ES。诚实的验证范围：
+**这不是 clone 就能直接运行的完整应用**，需要业务 jar 与 ES。诚实的验证范围：
 
 | 验证项 | 状态 |
 |---|---|
@@ -156,20 +155,20 @@ CI 里还会跑：脚本语法、密钥扫描、敏感文件、README 图片引�
 | 无 `.selfdesk-autologin.json` 时不写入任何凭据 | 通过 |
 | 四个 PowerShell 脚本语法解析 | 0 错误 |
 | GitHub Actions：补丁测试 + 语法 + 密钥扫描 + 敏感文件 + 图片引用 | success |
-| 完整启动（ES + 应用 + 仪表盘） | 依赖上游部署，需按上面步骤执行 |
+| 完整启动（ES + 应用 + 仪表盘） | 依赖业务工程部署，需按上面步骤执行 |
 
 前端三个页面的截图都来自本地真实运行。
 
 ## 已知限制
 
-- **jar 补丁是覆盖式**：升级上游后必须重跑 `bootstrap.ps1`，否则定制层被覆盖。
-- **后台主题靠 CSS 覆盖**：上游 AntD 结构变化时可能要补选择器。
+- **jar 补丁是覆盖式**：升级业务工程后必须重跑 `bootstrap.ps1`，否则界面层会被覆盖。
+- **后台主题靠 CSS 覆盖**：AntD 结构变化时可能要补选择器。
 - **仪表盘费用是估算**：按 DeepSeek 公开单价折算，不是账单。
 - **免密只适合本机**：凭据在 jar 里，公网部署请删掉 `.selfdesk-autologin.json` 重新打包。
-- **许可**：与 AGPL-3.0 上游结合运行，本仓库同为 AGPL-3.0。
+- **许可**：AGPL-3.0，详见 LICENSE 与 NOTICE.md。
 
 ## Roadmap
 
 - [ ] `console/` 拆成模块（目前单文件），便于二次开发
 - [ ] 仪表盘支持导出 CSV
-- [ ] 用 Testcontainers 做一次端到端冒烟（上游 + ES）
+- [ ] 用 Testcontainers 做一次端到端冒烟（业务工程 + ES）
