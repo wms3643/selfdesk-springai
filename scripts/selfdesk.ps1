@@ -58,6 +58,8 @@ if (Test-Path -LiteralPath $envFile) {
         if ($_ -match '^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$') {
             $k = $Matches[1]
             $v = $Matches[2].Trim().Trim('"').Trim("'")
+            # 只导入启动相关的键：其余键（如 RUSTFS/MYSQL）与 Spring 配置同前缀时会被误绑定
+            if ($k -notmatch '^(DEEPSEEK_|SELFDESK_|SPRING_)' -and $k -ne 'BYTEDESK_ADMIN_PASSWORD') { return }
             if ($v -and -not [Environment]::GetEnvironmentVariable($k, 'Process')) {
                 [Environment]::SetEnvironmentVariable($k, $v, 'Process')
             }
