@@ -73,5 +73,8 @@ Write-Host "  2) 启动基础设施：docker compose up -d"
 Write-Host "  3) 启动服务：.\scripts\selfdesk.ps1 start"
 Write-Host "  4) 打开 http://127.0.0.1:9003/admin 与 http://127.0.0.1:8002/"
 Write-Host ""
+Write-Host "  管理后台默认免登录（演示账号 admin@email.com / SelfDesk#2026 自动填入并提交）。" -ForegroundColor Green
+Write-Host "  要恢复正式登录：设置 `$env:SELFDESK_DEMO_AUTOLOGIN='0' 后重跑本脚本。" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host "  提示：如果 ES 跑在 Docker 里，selfdesk.ps1 里的 WSL 分支不会再启动一份；" -ForegroundColor DarkGray
 Write-Host "        端口 19200 已占用时脚本会直接复用。" -ForegroundColor DarkGray

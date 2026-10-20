@@ -1,4 +1,4 @@
-"""补丁脚本的回归测试：用合成 jar 验证覆盖、注入、幂等与备份。
+"""补丁脚本的回归测试：用合成 jar 验证覆盖、注入、免密开关、幂等与备份。
 
 不碰真实的上游 jar，跑得很快。
 """
@@ -23,6 +23,8 @@ ENTRIES = {
     "BOOT-INF/classes/static/keep.txt": "untouched",
 }
 
+ASSIGN = "window.__SELFDESK_AUTOLOGIN__={"
+
 
 def build_jar(path: pathlib.Path) -> None:
     with zipfile.ZipFile(path, "w") as zf:
@@ -46,6 +48,7 @@ def test_patch_overwrites_and_injects(monkeypatch, tmp_path):
     jar = tmp_path / "bytedesk-starter.jar"
     build_jar(jar)
     monkeypatch.setenv("SELFDESK_JAR", str(jar))
+    monkeypatch.setenv("SELFDESK_DEMO_AUTOLOGIN", "0")
 
     load_module().main()
 
@@ -54,8 +57,8 @@ def test_patch_overwrites_and_injects(monkeypatch, tmp_path):
 
     brand = read(jar, "BOOT-INF/classes/static/selfdesk-brand.js")
     assert "OLD BRAND" not in brand
-    # 没有 .selfdesk-autologin.json 时绝不注入凭据
-    assert "window.__SELFDESK_AUTOLOGIN__={" not in brand
+    # 关闭演示免密时不注入任何凭据
+    assert ASSIGN not in brand
 
     admin = read(jar, "BOOT-INF/classes/static/admin/index.html")
     assert 'src="/selfdesk-brand.js"' in admin
@@ -63,6 +66,32 @@ def test_patch_overwrites_and_injects(monkeypatch, tmp_path):
     assert "#1677ff" not in admin
 
     assert read(jar, "BOOT-INF/classes/static/keep.txt") == "untouched"
+
+
+def test_demo_autologin_enabled_by_default(monkeypatch, tmp_path):
+    """克隆者不配置任何东西，后台也不该卡在登录页。"""
+    jar = tmp_path / "bytedesk-starter.jar"
+    build_jar(jar)
+    monkeypatch.setenv("SELFDESK_JAR", str(jar))
+    monkeypatch.delenv("SELFDESK_DEMO_AUTOLOGIN", raising=False)
+
+    load_module().main()
+
+    brand = read(jar, "BOOT-INF/classes/static/selfdesk-brand.js")
+    assert brand.startswith(ASSIGN)
+    assert "admin@email.com" in brand.split("\n")[0]
+
+
+def test_demo_autologin_uses_env_password(monkeypatch, tmp_path):
+    jar = tmp_path / "bytedesk-starter.jar"
+    build_jar(jar)
+    monkeypatch.setenv("SELFDESK_JAR", str(jar))
+    monkeypatch.setenv("SELFDESK_DEMO_PASSWORD", "Passw0rd!")
+
+    load_module().main()
+
+    first_line = read(jar, "BOOT-INF/classes/static/selfdesk-brand.js").split("\n")[0]
+    assert "Passw0rd!" in first_line
 
 
 def test_backup_created(monkeypatch, tmp_path):
@@ -86,3 +115,5 @@ def test_idempotent(monkeypatch, tmp_path):
 
     admin = read(jar, "BOOT-INF/classes/static/admin/index.html")
     assert admin.count("selfdesk-brand.js") == 1
+    brand = read(jar, "BOOT-INF/classes/static/selfdesk-brand.js")
+    assert brand.count(ASSIGN) == 1

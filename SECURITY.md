@@ -14,6 +14,15 @@
 
 CI 会扫描 `sk-` 长串与私钥块，并检查上述文件是否被跟踪。
 
+## 演示免密（默认开启）
+
+构建时 `SELFDESK_DEMO_AUTOLOGIN` 默认为 `1`：`scripts/patch_jar.py` 会把演示账号写入 jar 内的
+`selfdesk-brand.js`，后台登录页自动填入并提交，访问 `/admin` 无需输入密码。
+
+- 只适合本地演示；对外部署前用 `SELFDESK_DEMO_AUTOLOGIN=0` 重新打补丁
+- 密码取自 `SELFDESK_DEMO_PASSWORD`，应与首次建库的 `BYTEDESK_ADMIN_PASSWORD` 一致
+- 该凭据是**已知的演示值**，不要当作安全机制
+
 ## 免密的边界
 
 `.selfdesk-autologin.json` 会把凭据写进 jar，只适合本机演示。
