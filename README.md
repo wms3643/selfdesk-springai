@@ -107,6 +107,21 @@ compose.yaml        Elasticsearch（+ 可选 Redis）
 - [故障排查](docs/TROUBLESHOOTING.md)
 - [Spring AI 模型接入与网关切换](docs/SPRING-AI.md)
 
+## 测试
+
+```bash
+pip install -r requirements-dev.txt
+pytest        # 3 个用例，秒级完成，不需要上游 jar
+```
+
+| 用例 | 验证什么 |
+|---|---|
+| `test_patch_overwrites_and_injects` | console 被覆盖、brand.js 写入、`<script>` 注入、theme-color 改色、其他条目不动 |
+| `test_backup_created` | 打补丁前生成 `.jar.bak-selfdesk` |
+| `test_idempotent` | 连续打两次，`<script>` 仍只有一处 |
+
+CI 里还会跑：脚本语法、密钥扫描、敏感文件、README 图片引用、compose 解析。
+
 ## 能跑到什么程度
 
 **这不是 clone 就能直接运行的完整应用**，需要上游 jar 与 ES。诚实的验证范围：
@@ -117,7 +132,7 @@ compose.yaml        Elasticsearch（+ 可选 Redis）
 | 重复执行幂等（brand.js 只注入一次） | 通过 |
 | 无 `.selfdesk-autologin.json` 时不写入任何凭据 | 通过 |
 | 四个 PowerShell 脚本语法解析 | 0 错误 |
-| GitHub Actions：语法 + 密钥扫描 + 敏感文件 + 图片引用 | 已配置 |
+| GitHub Actions：补丁测试 + 语法 + 密钥扫描 + 敏感文件 + 图片引用 | success |
 | 完整启动（ES + 应用 + 仪表盘） | 依赖上游部署，需按上面步骤执行 |
 
 前端三个页面的截图都来自本地真实运行。

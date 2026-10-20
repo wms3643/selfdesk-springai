@@ -34,6 +34,11 @@ jobs:
           if ($bad -gt 0) { exit 1 }
           Write-Host "PowerShell 语法检查通过"
 
+      - name: 补丁脚本测试
+        run: |
+          python -m pip install --quiet pytest
+          python -m pytest -q tests
+
       - name: 密钥扫描
         run: |
           set -e
