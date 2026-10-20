@@ -67,6 +67,9 @@ if (Test-Path -LiteralPath $envFile) {
     }
 }
 
+# 管理员初始密码（仅首次建库生效）；与 patch_jar 注入的免密账号保持一致
+if (-not $env:BYTEDESK_ADMIN_PASSWORD) { $env:BYTEDESK_ADMIN_PASSWORD = 'SelfDesk#2026' }
+
 $redisPort    = 16379
 $esPort       = 19200
 $embedPort    = 8000

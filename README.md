@@ -97,14 +97,29 @@ docker compose up -d
 >
 > 已经有构建好的 jar：`$env:SELFDESK_JAR="..."; .\scripts\bootstrap.ps1 -SkipBuild`。
 
-### 可选：本机免密
+### 默认账号
+
+| 入口 | 账号 | 密码 | 说明 |
+|---|---|---|---|
+| 管理后台 `/admin` | `admin@email.com` | `SelfDesk#2026` | 打补丁时已注入，页面自动填入并提交 |
+| 客服工作台 `/console/` | —— | —— | 演示模式自动以 `SuperAdmin` 进入 |
+| 访客端 `/chat/` | —— | —— | 无需登录 |
+
+密码来自 `.env.local` 的 `BYTEDESK_ADMIN_PASSWORD`（缺省 `SelfDesk#2026`），**只在首次建库时写入**；
+库已存在后再改这个变量不会改密码。
+
+要恢复正式登录（页面不再自动填入）：
 
 ```powershell
-'{"username":"admin@email.com","password":"你的密码"}' > .selfdesk-autologin.json
+$env:SELFDESK_DEMO_AUTOLOGIN = '0'
 .\scripts\bootstrap.ps1 -SkipBuild
 ```
 
-凭据只进 jar，不进仓库（该文件已 gitignore）。
+想换成别的账号，可放一个 `.selfdesk-autologin.json`（已 gitignore），优先级高于演示默认值：
+
+```json
+{"username":"admin@email.com","password":"你的密码"}
+```
 
 ## 目录
 
