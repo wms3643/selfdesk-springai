@@ -2,6 +2,9 @@
 
 ![ci](https://github.com/wms3643/selfdesk-springai/actions/workflows/ci.yml/badge.svg)
 
+> **完整源码在 [bytedesk-selfdesk](https://github.com/wms3643/bytedesk-selfdesk)**：24 个模块、239 个控制器的整套系统。
+> 本仓库只保留界面定制层与部署脚本，适合单独看改动。
+
 在开源客服系统 [bytedesk](https://github.com/Bytedesk/bytedesk) 之上做的一层**可部署的定制**：
 自写客服工作台、运营仪表盘、统一视觉层，配一套能重复执行的打包与启停脚本。
 
