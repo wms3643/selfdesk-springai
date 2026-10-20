@@ -36,6 +36,21 @@ $dashDir      = Join-Path $root 'dashboard'
 $dashPidFile  = Join-Path $runtime 'dashboard.pid'
 $ProgressPreference = 'SilentlyContinue'
 
+# 数据库：默认 PostgreSQL；设置 SELFDESK_DB=h2 可退回单机文件库
+$dbKind  = if ($env:SELFDESK_DB) { $env:SELFDESK_DB } else { 'postgresql' }
+$dbHost  = if ($env:SELFDESK_DB_HOST) { $env:SELFDESK_DB_HOST } else { '127.0.0.1' }
+$dbPort  = if ($env:SELFDESK_DB_PORT) { $env:SELFDESK_DB_PORT } else { '5432' }
+$dbName  = if ($env:SELFDESK_DB_NAME) { $env:SELFDESK_DB_NAME } else { 'bytedesk' }
+$dbUser  = if ($env:SELFDESK_DB_USER) { $env:SELFDESK_DB_USER } else { 'bytedesk' }
+$dbPass  = if ($env:SELFDESK_DB_PASSWORD) { $env:SELFDESK_DB_PASSWORD } else { 'bytedesk_local' }
+if ($dbKind -eq 'h2') {
+    $dbUrl = 'jdbc:h2:file:./h2db/selfdesk'
+    $dbUser = 'sa'
+    $dbPass = 'sa'
+} else {
+    $dbUrl = "jdbc:${dbKind}://${dbHost}:${dbPort}/${dbName}"
+}
+
 # 读取 .env.local（存在时），不覆盖已设置的环境变量
 $envFile = Join-Path $root '.env.local'
 if (Test-Path -LiteralPath $envFile) {
@@ -230,9 +245,11 @@ function Start-App {
         '-XX:+UseSerialGC',
         '-jar', $jar,
         '--spring.profiles.active=open',
-        '--bytedesk.datasource.active=h2',
+        ('--bytedesk.datasource.active=' + $dbKind),
         '--bytedesk.demo-order-api.enabled=true',
-        '--spring.datasource.url=jdbc:h2:file:./h2db/selfdesk',
+        ('--spring.datasource.url=' + $dbUrl),
+        ('--spring.datasource.username=' + $dbUser),
+        ('--spring.datasource.password=' + $dbPass),
         '--server.port=' + $appPort,
         '--bytedesk.testing.enabled=true',
         '--bytedesk.testing.disable-captcha=true',

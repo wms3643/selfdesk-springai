@@ -24,7 +24,7 @@ AI 侧用 **Spring AI**，模型可配多厂商，也能一键切到本地 Pytho
 | 业务系统 | Java / Spring Boot | 同一套，不改 |
 | AI 实现 | Spring AI + DeepSeek | Python + LangGraph 编排 |
 | 进程数 | 1 个（:9003） | 2 个（:9003 业务 + :8003 AI） |
-| 会话与状态 | 全在 H2 | 业务在 H2，AI 状态在 PostgreSQL |
+| 会话与状态 | 全在 PostgreSQL | 业务在 PostgreSQL，AI 状态在另一个 PostgreSQL 库 |
 | 访客入口 | `:9003/chat/` | **同一个** `:9003/chat/`，AI 请求转给 8003 |
 | 代码仓库 | 本仓库 | 本仓库 + [selfdesk-langgraph](https://github.com/wms3643/selfdesk-langgraph) |
 

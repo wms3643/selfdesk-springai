@@ -5,11 +5,28 @@
 #   docker compose logs -f elasticsearch
 #
 # 说明：
-# - 应用默认用 H2，不需要额外的数据库容器
+# - 应用默认连 PostgreSQL（表由 JPA 自动创建）；设 SELFDESK_DB=h2 可退回单机文件库
 # - Elasticsearch 映射到 19200，与 scripts/selfdesk.ps1 的默认端口一致
 # - Redis 默认不启用（bytedesk.cache.level=0 时不需要），需要时取消注释
 
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: selfdesk-pg
+    environment:
+      POSTGRES_DB: bytedesk
+      POSTGRES_USER: bytedesk
+      POSTGRES_PASSWORD: bytedesk_local
+    ports:
+      - "15432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bytedesk -d bytedesk"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.15.0
     container_name: selfdesk-es
@@ -44,4 +61,5 @@ services:
 
 volumes:
   esdata:
+  pgdata:
   # redisdata:
